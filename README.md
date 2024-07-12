@@ -6,6 +6,8 @@ We will release the code in the future
 Optimal Partition Assignment for Universal Object Detection
 Link : https://ieeexplore.ieee.org/document/9956875
 
+![图片](opa-tmm.jpg)
+
 ## Citation
 If Our work is useful or relevant to your research, please kindly recognize our contributions by citing our paper:
 ```bibtex

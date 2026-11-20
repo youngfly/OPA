@@ -1,6 +1,6 @@
 # OPA 论文代码库
 
-基于 **mmdetection 2.25.1** 的遥感目标检测论文代码库，主线为 **paper3 OPA**（GA 检测器 / GAHead：GMM 正样本分配 + paa_reassign 重分配 + IoU/GIoU 分支 + score_voting），同时归档两条旧实验线（paper_sd 蒸馏、paper_ssl MAE 预训练 ViT）。
+基于 **mmdetection 2.25.1** 代码库，主线为 **paper3 OPA**（GA 检测器 / GAHead：GMM 正样本分配 + paa_reassign 重分配 + IoU/GIoU 分支 + score_voting），同时归档两条旧实验线（paper_sd 蒸馏、paper_ssl MAE 预训练 ViT）。
 
 ## Paper
 
@@ -34,44 +34,44 @@ OPA/
 
 ### Part 1 · detectors（5 个自定义检测器）
 
-| 检测器（文件）              | 基类               | 实现的能力                                                                                                                             | 状态         |
-| --------------------------- | ------------------ | -------------------------------------------------------------------------------------------------------------------------------------- | ------------ |
-| GA (ga.py)                  | PAA                | OPA 主检测器：训练流程即标准 PAA，论文核心分区分配逻辑全部在 GAHead；另覆写 show_result（score_thr=0.7 硬编码、蓝色框）                 | 在用（主线） |
-| VIT_ATSS (vit_atss.py)      | SingleStageDetector | ViT/Swin + ATSS 的封装：pretrained 转发给 backbone、neck 可选（单尺度特征直连）；附 FPN 热力图可视化工具（未启用）                      | paper_ssl    |
-| SS (ss.py)                  | PAA                | 自蒸馏：4 条监督通路（GMM 特征增强 / 跨层分类监督 / 正样本分类 / 正样本回归 NIoU），epoch>3 延迟启动，开关硬编码、当前仅回归通路生效     | 废弃归档     |
-| Distill_PAA (dis_paa.py)    | PAA                | 师生蒸馏：冻结教师 + 1×1 通道适应层 + 关系蒸馏（正样本分类特征成对距离 smooth-L1，仅蒸馏教师更优样本集）；几何蒸馏 dis_geo 为未完成残段 | 废弃归档     |
-| Prune_Retina (prune_retina.py) | RetinaNet       | BN-γ 网络瘦身剪枝实验（全局阈值 50%）；剪枝调用与结构重建代码均已注释，当前等效普通 RetinaNet                                           | 孤儿         |
+| 检测器（文件）                 | 基类                | 实现的能力                                                                                                                               | 状态         |
+| ------------------------------ | ------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- | ------------ |
+| GA (ga.py)                     | PAA                 | OPA 主检测器：训练流程即标准 PAA，论文核心分区分配逻辑全部在 GAHead；另覆写 show_result（score_thr=0.7 硬编码、蓝色框）                  | 在用（主线） |
+| VIT_ATSS (vit_atss.py)         | SingleStageDetector | ViT/Swin + ATSS 的封装：pretrained 转发给 backbone、neck 可选（单尺度特征直连）；附 FPN 热力图可视化工具（未启用）                       | paper_ssl    |
+| SS (ss.py)                     | PAA                 | 自蒸馏：4 条监督通路（GMM 特征增强 / 跨层分类监督 / 正样本分类 / 正样本回归 NIoU），epoch>3 延迟启动，开关硬编码、当前仅回归通路生效     | 废弃归档     |
+| Distill_PAA (dis_paa.py)       | PAA                 | 师生蒸馏：冻结教师 + 1×1 通道适应层 + 关系蒸馏（正样本分类特征成对距离 smooth-L1，仅蒸馏教师更优样本集）；几何蒸馏 dis_geo 为未完成残段 | 废弃归档     |
+| Prune_Retina (prune_retina.py) | RetinaNet           | BN-γ 网络瘦身剪枝实验（全局阈值 50%）；剪枝调用与结构重建代码均已注释，当前等效普通 RetinaNet                                           | 孤儿         |
 
 另有 a_yyr_tools.py（12 行小工具，孤儿，无配置引用）。
 
 ### Part 2 · dense_heads（11 个自定义 head）
 
-| Head（文件）                          | 系列       | 实现的能力                                                                                                                   | 配置引用 |
-| ------------------------------------- | ---------- | ---------------------------------------------------------------------------------------------------------------------------- | -------- |
-| GAHead (ga_head.py)                   | GA/OPA     | **OPA 核心**：ATSS 初分配后，用 geatpy 进化算法在 (分类损失, 回归损失) 二维空间拟合最优分区直线重划正负样本（ga_reassign，替代 PAA 的 GMM 阈值）；IoU 预测分支（GIoU 目标）+ score_voting；topk=9 硬编码 | 10（主线） |
-| GAHead2 (ga_head2.py)                 | GA/OPA     | GAHead 实验变体：topk=18 且可配置；EA 目标函数张量化上 GPU，种群 150 / 迭代 100                                              | 0        |
-| GAHead3 (ga_head3.py)                 | GA/OPA     | GAHead 简化变体：弃用进化算法，按损失空间到原点距离的中位数分区                                                              | 0        |
-| GAHead_ASSIGN (ga_head_vis_assign.py) | GA/OPA     | GAHead + vis_assign 分配过程可视化钩子                                                                                       | 0        |
-| SSHead (ss_head.py)                   | 蒸馏       | PAA GMM 重分配 + IoU 分支 + score_voting；另提供 loss_fea / loss_tea 导出正样本特征与损失，供 SS、Distill_PAA 蒸馏使用        | 4        |
-| SS_BAYHead (ss_head_bayesian.py)      | 蒸馏       | SSHead 的贝叶斯变体：paa_reassign 中 GMM 换为 BayesianGaussianMixture；移除 loss_fea                                         | 3        |
-| SSHead2 (ss_head2.py)                 | 蒸馏       | 在 AnchorHead 上重建的 ATSS 式 head（独立 cls/reg/centerness 塔），无 GMM 重分配与蒸馏接口；自带新 API get_bboxes             | 0        |
-| ATSSHead_iou_giou (atss_head_iou_giou.py) | ATSS/PAA | ATSS 的 centerness 分支替换为 IoU 预测（GIoU 损失）；自带新 API get_bboxes                                                   | 1        |
-| ATSSHead_ASSIGN (atss_head_vis_assign.py) | ATSS/PAA | ATSS（AnchorHead 实现）+ vis_assign 采样分配可视化；自带新 API get_bboxes                                                    | 1        |
-| PAAHead_ASSIGN (paa_head_vis_assign.py) | ATSS/PAA   | PAA（ATSSHead 实现）+ paa_reassign 内无条件调用 vis_assign 可视化 GMM 分配                                                   | 2        |
-| DWHead (dw_head.py)                   | anchor-free | FCOS 式 + 逐类高斯中心先验 CenterPrior（soft/hard）正样本加权 + 基于置信度的负样本降权 + 可选可变形回归 refine；已用 2.25 新推理 API | 5        |
+| Head（文件）                              | 系列        | 实现的能力                                                                                                                                                                                                     | 配置引用   |
+| ----------------------------------------- | ----------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------- |
+| GAHead (ga_head.py)                       | GA/OPA      | **OPA 核心**：ATSS 初分配后，用 geatpy 进化算法在 (分类损失, 回归损失) 二维空间拟合最优分区直线重划正负样本（ga_reassign，替代 PAA 的 GMM 阈值）；IoU 预测分支（GIoU 目标）+ score_voting；topk=9 硬编码 | 10（主线） |
+| GAHead2 (ga_head2.py)                     | GA/OPA      | GAHead 实验变体：topk=18 且可配置；EA 目标函数张量化上 GPU，种群 150 / 迭代 100                                                                                                                                | 0          |
+| GAHead3 (ga_head3.py)                     | GA/OPA      | GAHead 简化变体：弃用进化算法，按损失空间到原点距离的中位数分区                                                                                                                                                | 0          |
+| GAHead_ASSIGN (ga_head_vis_assign.py)     | GA/OPA      | GAHead + vis_assign 分配过程可视化钩子                                                                                                                                                                         | 0          |
+| SSHead (ss_head.py)                       | 蒸馏        | PAA GMM 重分配 + IoU 分支 + score_voting；另提供 loss_fea / loss_tea 导出正样本特征与损失，供 SS、Distill_PAA 蒸馏使用                                                                                         | 4          |
+| SS_BAYHead (ss_head_bayesian.py)          | 蒸馏        | SSHead 的贝叶斯变体：paa_reassign 中 GMM 换为 BayesianGaussianMixture；移除 loss_fea                                                                                                                           | 3          |
+| SSHead2 (ss_head2.py)                     | 蒸馏        | 在 AnchorHead 上重建的 ATSS 式 head（独立 cls/reg/centerness 塔），无 GMM 重分配与蒸馏接口；自带新 API get_bboxes                                                                                              | 0          |
+| ATSSHead_iou_giou (atss_head_iou_giou.py) | ATSS/PAA    | ATSS 的 centerness 分支替换为 IoU 预测（GIoU 损失）；自带新 API get_bboxes                                                                                                                                     | 1          |
+| ATSSHead_ASSIGN (atss_head_vis_assign.py) | ATSS/PAA    | ATSS（AnchorHead 实现）+ vis_assign 采样分配可视化；自带新 API get_bboxes                                                                                                                                      | 1          |
+| PAAHead_ASSIGN (paa_head_vis_assign.py)   | ATSS/PAA    | PAA（ATSSHead 实现）+ paa_reassign 内无条件调用 vis_assign 可视化 GMM 分配                                                                                                                                     | 2          |
+| DWHead (dw_head.py)                       | anchor-free | FCOS 式 + 逐类高斯中心先验 CenterPrior（soft/hard）正样本加权 + 基于置信度的负样本降权 + 可选可变形回归 refine；已用 2.25 新推理 API                                                                           | 5          |
 
 ### 其他自定义
 
-| 位置         | 文件                    | 功能                                                             | 状态         |
-| ------------ | ----------------------- | ---------------------------------------------------------------- | ------------ |
-| datasets     | dota.py                 | DotaDataset(CocoDataset)，15 类                                  | 在用         |
-| datasets     | dior.py                 | DiorDataset(XMLDataset)，year=2020，重写 evaluate/get_ann_info   | 在用         |
-| datasets     | nwpu.py                 | NwpuDataset，逐类 mAP（依赖 yyr_creation，:9 import 已注释）     | 在用         |
+| 位置         | 文件                    | 功能                                                               | 状态         |
+| ------------ | ----------------------- | ------------------------------------------------------------------ | ------------ |
+| datasets     | dota.py                 | DotaDataset(CocoDataset)，15 类                                    | 在用         |
+| datasets     | dior.py                 | DiorDataset(XMLDataset)，year=2020，重写 evaluate/get_ann_info     | 在用         |
+| datasets     | nwpu.py                 | NwpuDataset，逐类 mAP（依赖 yyr_creation，:9 import 已注释）       | 在用         |
 | backbones    | vit.py                  | MaskedAutoencoderViT + VisionTransformer（timm）；顶层 import timm | paper_ssl    |
-| backbones    | pos_embed.py            | 2D sincos 位置编码                                               | paper_ssl    |
-| losses       | iou_loss.py 内 NIoULoss | 官方文件追加（与 2.12 字节一致）                                 | 在用         |
-| yyr_creation | pycocotools_yyr/        | cocoeval1.py 逐类 mAP；_mask.so 仅 Linux/py3.6                   | 在用（受限） |
-| yyr_creation | visualization/          | 多色 imshow_det_bboxes                                           | 在用         |
+| backbones    | pos_embed.py            | 2D sincos 位置编码                                                 | paper_ssl    |
+| losses       | iou_loss.py 内 NIoULoss | 官方文件追加（与 2.12 字节一致）                                   | 在用         |
+| yyr_creation | pycocotools_yyr/        | cocoeval1.py 逐类 mAP；_mask.so 仅 Linux/py3.6                     | 在用（受限） |
+| yyr_creation | visualization/          | 多色 imshow_det_bboxes                                             | 在用         |
 
 注册方式：直接改各级 `__init__.py`（datasets / detectors / dense_heads / backbones / losses），未用 custom_imports。
 

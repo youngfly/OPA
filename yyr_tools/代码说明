@@ -1,0 +1,50 @@
+# todo 1、配置文件说明
+1) a_configs:
+paper_ssl:采用mae 中 VIT 以及 swin 作为 变体的模型
+paper_sd:废弃。self_distillation
+paper3_opa: 第三篇论文补充实验的代码
+
+# todo 2、自己添加新的模块主要位于mmdet里面
+1) datasets
+  (1) dota.py 直接继承于coco数据集，修改为自己的类别
+  (2) dior.py 直接继承于xml数据集， 添加为自己的类别，年份需要修改为2020.否则测试的时候，出来的为原本voc的类别，
+              自己重新复写evaluate 和 get_ann_info函数，原本的可能无法直接使用。
+  (3) nwpu.py 直接继承于coco数据集， 添加自己的类别， 写了一个新的evaluate函数，用来调用自己在 Pycocotools里面的重新写的为coco里面的每一个
+              类别各自的mAP.详情请看 /mmdet/yyr_creation/pycocotools_yyr/
+              关键在于这句 from pycocotools.cocoeval1 import COCOeval
+  需要在mmdet/datasets/_init_.py 添加自己的新注册的数据集
+2）models
+  (1) backbones
+      vit
+  (2) detectors
+      vit_atss
+      todo paper3 OPA
+      ga OPA的检测器
+      todo 废弃
+      prune_retina.py    自己写的用来的剪枝的检测器
+      ss.py 检测自监督
+      dis_paa 蒸馏
+  (3) loss
+      NIoU loss
+  (4) head
+      todo paper3 OPA
+      atss_head_iou_giou 将原本的 Centerness 替换 IoU or GIoU
+      ga_head OPA 主要代码
+      ga_head2
+      ga_head3
+      todo 废弃
+      ss_head
+      ss_head2
+      ss_head_bayesian
+  需要在mmdet/models/detectors/_init_.py 添加自己新注册的detectors
+3）yyr_creation
+  (1) pycocotools_yyr 添加了可以使coco数据集显示每一个类别的mAP功能。具体使用方式看内部
+  (2) visualization 修改了原来的单颜色的画图问题，具体使用方式看内部
+
+# todo 3、其他文档说明
+1）代码说明：里面讲述其他工具的使用
+
+# todo 4、关于regNet的使用
+网上下载的模型的需要提前转换一下
+代码位置 tools/model_converters/regnet2mmdet.py
+使用方法 python -u tools/model_converters/regnet2mmdet.py ${PRETRAIN_PATH} ${STORE_PATH}
